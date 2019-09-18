@@ -1,0 +1,148 @@
+- name: "Set facts for private_ca_path"
+  set_fact:
+    private_ca_path: "environments/{{ using_environment }}/files/private_ca"
+
+- name: "Check nginx instance ({{ processed_container }}) private key file exists - using selfsigned CA"
+  become: no
+  connection: local
+  stat:
+    path: "environments/{{ using_environment }}/files/nginx/ssl/{{ inventory_hostname }}_{{ dcore.nginx.container_name }}/{{ inventory_hostname }}_{{ dcore.nginx.container_name }}.key"
+  register: nginx_private_key_file_existence
+
+- name: "Generate an OpenSSL private key for nginx instance ({{ processed_container }}) - using selfsigned CA"
+  become: no
+  connection: local
+  openssl_privatekey:
+    path: "environments/{{ using_environment }}/files/nginx/ssl/{{ inventory_hostname }}_{{ dcore.nginx.container_name }}/{{ inventory_hostname }}_{{ dcore.nginx.container_name }}.key"
+  when: not nginx_private_key_file_existence.stat.exists
+
+- name: "Vault: get modulus of nginx instance ({{ processed_container }}) private key if present - using selfsigned CA"
+  become: no
+  connection: local
+  shell: |
+          if `head -1 environments/{{ using_environment }}/files/nginx/ssl/{{ inventory_hostname }}_{{ dcore.nginx.container_name }}/{{ inventory_hostname }}_{{ dcore.nginx.container_name }}.key | grep -q 'ANSIBLE_VAULT'`
+            then
+              ansible-vault view environments/{{ using_environment }}/files/nginx/ssl/{{ inventory_hostname }}_{{ dcore.nginx.container_name }}/{{ inventory_hostname }}_{{ dcore.nginx.container_name }}.key | \
+              openssl rsa -noout -modulus | openssl md5 | awk '{ print $2 }'
+          elif `head -1 environments/{{ using_environment }}/files/nginx/ssl/{{ inventory_hostname }}_{{ dcore.nginx.container_name }}/{{ inventory_hostname }}_{{ dcore.nginx.container_name }}.key | grep -q 'PRIVATE KEY-----'`
+            then
+              cat environments/{{ using_environment }}/files/nginx/ssl/{{ inventory_hostname }}_{{ dcore.nginx.container_name }}/{{ inventory_hostname }}_{{ dcore.nginx.container_name }}.key | openssl rsa -noout -modulus | openssl md5 | awk '{ print $2 }'
+          else
+            echo "not_valid_SSL_key"
+          fi
+  register: nginx_private_key_modulus
+
+- name: "DEBUG: Print modulus from nginx private key"
+  debug: var=nginx_private_key_modulus.stdout
+
+- name: "Generate an OpenSSL private key for nginx instance ({{ processed_container }}) if the file is not valid SSL key - using selfsigned CA"
+  become: no
+  connection: local
+  openssl_privatekey:
+    path: "environments/{{ using_environment }}/files/nginx/ssl/{{ inventory_hostname }}_{{ dcore.nginx.container_name }}/{{ inventory_hostname }}_{{ dcore.nginx.container_name }}.key"
+  when: nginx_private_key_modulus.stdout == "not_valid_SSL_key"
+
+- name: "Check if nginx instance ({{ processed_container }}) CRT file exists - using selfsigned CA"
+  become: no
+  connection: local
+  stat:
+    path: "environments/{{ using_environment }}/files/nginx/ssl/{{ inventory_hostname }}_{{ dcore.nginx.container_name }}/{{ inventory_hostname }}_{{ dcore.nginx.container_name }}.crt"
+  register: nginx_crt_file_existence
+
+- name: "Vault: get modulus of nginx instance ({{ processed_container }}) CRT if present - using selfsigned CA"
+  become: no
+  connection: local
+  shell: |
+          if `cat environments/{{ using_environment }}/files/nginx/ssl/{{ inventory_hostname }}_{{ dcore.nginx.container_name }}/{{ inventory_hostname }}_{{ dcore.nginx.container_name }}.crt | grep -q 'BEGIN CERTIFICATE'`
+            then
+              cat environments/{{ using_environment }}/files/nginx/ssl/{{ inventory_hostname }}_{{ dcore.nginx.container_name }}/{{ inventory_hostname }}_{{ dcore.nginx.container_name }}.crt | openssl x509 -noout -modulus | openssl md5 | awk '{ print $2 }'
+            else
+              echo "not_valid_SSL_certificate"
+          fi
+  register: nginx_crt_modulus
+  when: nginx_crt_file_existence.stat.exists
+
+- name: "DEBUG: Print modulus from nginx instance ({{ processed_container }}) CRT"
+  debug: var=nginx_crt_modulus.stdout
+
+- name: "Compare nginx instance ({{ processed_container }}) private key modulus with nginx instance ({{ processed_container }}) CRT modulus - part 1 - using selfsigned CA"
+  set_fact:
+    nginx_key_and_crt_match: false
+  when: nginx_crt_modulus.stdout is not defined
+
+- name: "Compare nginx instance ({{ processed_container }}) private key modulus with nginx instance ({{ processed_container }}) CRT modulus - part 2 - using selfsigned CA"
+  set_fact:
+    nginx_key_and_crt_match: "{{ 'false' if nginx_private_key_modulus.stdout != nginx_crt_modulus.stdout else 'true' }}"
+  when: nginx_crt_modulus.stdout is defined
+
+- name: "DEBUG: Print CA key and CA CRT modulus"
+  debug: var=nginx_key_and_crt_match
+
+- name: "Verify if nginx instance ({{ processed_container }}) CRT was issued by our CA - using selfsigned CA"
+  become: no
+  connection: local
+  shell: |
+          openssl verify -verbose \
+          -CAfile {{ private_ca_path }}/{{ using_environment }}_ca.crt \
+          environments/{{ using_environment }}/files/nginx/ssl/{{ inventory_hostname }}_{{ dcore.nginx.container_name }}/{{ inventory_hostname }}_{{ dcore.nginx.container_name }}.crt
+  register: nginx_crt_check
+  ignore_errors: true
+
+- name: "DEBUG: Print if nginx instance ({{ processed_container }}) CRT was issued by our CA"
+  debug: var=nginx_crt_check.stdout
+
+- name: "Verify if nginx instance ({{ processed_container }}) CRT was issued by our CA - evaluation - using selfsigned CA"
+  set_fact:
+    nginx_crt_and_ca_match: "{{ 'true' if ': OK' in nginx_crt_check.stdout else 'false' }}"
+
+- name: "DEBUG: Print if nginx instance ({{ processed_container }}) CRT was issued by our CA - evaluation"
+  debug: var=nginx_crt_and_ca_match
+
+- name: "Create decrypted copy of the nginx instance ({{ processed_container }}) key file - using selfsigned CA"
+  become: no
+  connection: local
+  copy:
+    src:  "environments/{{ using_environment }}/files/nginx/ssl/{{ inventory_hostname }}_{{ dcore.nginx.container_name }}/{{ inventory_hostname }}_{{ dcore.nginx.container_name }}.key"
+    dest: "environments/{{ using_environment }}/files/nginx/ssl/{{ inventory_hostname }}_{{ dcore.nginx.container_name }}/{{ inventory_hostname }}_{{ dcore.nginx.container_name }}.decrypted.key"
+    mode: 0600
+  when: not nginx_key_and_crt_match or not nginx_crt_and_ca_match
+
+- name: "Generate an OpenSSL CSR for nginx instance ({{ processed_container }}) - using selfsigned CA"
+  become: no
+  connection: local
+  openssl_csr:
+    path:            environments/{{ using_environment }}/files/nginx/ssl/{{ inventory_hostname }}_{{ dcore.nginx.container_name }}/{{ inventory_hostname }}_{{ dcore.nginx.container_name }}.csr
+    privatekey_path: environments/{{ using_environment }}/files/nginx/ssl/{{ inventory_hostname }}_{{ dcore.nginx.container_name }}/{{ inventory_hostname }}_{{ dcore.nginx.container_name }}.decrypted.key
+    common_name:     "{{ dcore.nginx.server_name }}"
+  when: not nginx_key_and_crt_match or not nginx_crt_and_ca_match
+
+- name: "Create decrypted copy of the CA key file - using selfsigned CA"
+  become: no
+  connection: local
+  run_once: true
+  copy:
+    src:  "{{ private_ca_path }}/{{ using_environment }}_ca.key"
+    dest: "{{ private_ca_path }}/{{ using_environment }}_ca.decrypted.key"
+    mode: 0600
+  when: not nginx_key_and_crt_match or not nginx_crt_and_ca_match
+
+- name: "Generate a Self Signed OpenSSL certificate for nginx instance ({{ processed_container }}) - using selfsigned CA"
+  become: no
+  connection: local
+  openssl_certificate:
+    path:                  environments/{{ using_environment }}/files/nginx/ssl/{{ inventory_hostname }}_{{ dcore.nginx.container_name }}/{{ inventory_hostname }}_{{ dcore.nginx.container_name }}.crt
+    csr_path:              environments/{{ using_environment }}/files/nginx/ssl/{{ inventory_hostname }}_{{ dcore.nginx.container_name }}/{{ inventory_hostname }}_{{ dcore.nginx.container_name }}.csr
+    ownca_path:            "{{ private_ca_path }}/{{ using_environment }}_ca.crt"
+    ownca_privatekey_path: "{{ private_ca_path }}/{{ using_environment }}_ca.decrypted.key"
+    provider:              ownca
+  when: not nginx_key_and_crt_match or not nginx_crt_and_ca_match
+
+- name: "Generate merged Self Signed OpenSSL certificate for nginx instance ({{ processed_container }}) - using selfsigned CA"
+  become: no
+  connection: local
+  shell: >-
+            cat nginx/ssl/{{ inventory_hostname }}_{{ dcore.nginx.container_name }}/{{ inventory_hostname }}_{{ dcore.nginx.container_name }}.crt \
+            private_ca/{{ using_environment }}_ca.crt > \
+            nginx/ssl/{{ inventory_hostname }}_{{ dcore.nginx.container_name }}/fullchain.pem
+  args:
+    chdir:   "environments/{{ using_environment }}/files/"

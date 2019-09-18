@@ -1,0 +1,11 @@
+- name: "Debian - Installing pip"
+  apt:
+    name:
+      - python-pip
+    state: latest
+    update_cache: yes
+
+- name: "Debian - Installing python libraries"
+  pip:
+    name:
+      - docker-py

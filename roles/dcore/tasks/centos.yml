@@ -1,0 +1,5 @@
+- name: "RHEL - Installing python libraries"
+  yum:
+    name:
+      - python-docker-py
+    state: latest

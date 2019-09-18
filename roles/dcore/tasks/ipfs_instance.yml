@@ -1,0 +1,87 @@
+- name: "Pull IPFS docker image ({{ processed_container }})"
+  docker_image:
+    state: present
+    name:  "{{ vars['ipfs_containers'][dcore.ipfs_container_for_used_with]['image_name'] }}"
+    tag:   "{{ vars['ipfs_containers'][dcore.ipfs_container_for_used_with]['image_tag'] }}"
+    force: yes
+
+- name: "Prepare directory structure for IPFS ({{ processed_container }})"
+  file:
+    path:  "{{ required_ipfs_directories.path }}"
+    state: "{{ required_ipfs_directories.state }}"
+    mode:  "{{ required_ipfs_directories.mode }}"
+    owner: "{{ required_ipfs_directories.owner }}"
+    group: "{{ required_ipfs_directories.group }}"
+  with_items:
+    - { path: "{{ vars['ipfs_containers'][dcore.ipfs_container_for_used_with]['dir']['home'] }}",
+        state: 'directory',
+        mode:  '755',
+        owner: "{{ application_owner }}",
+        group: "{{ application_owner_group }}" }
+    - { path: "{{ vars['ipfs_containers'][dcore.ipfs_container_for_used_with]['dir']['conf'] }}",
+        state: 'directory',
+        mode:  '755',
+        owner: "{{ application_owner }}",
+        group: "{{ application_owner_group }}" }
+    - { path: "{{ vars['ipfs_containers'][dcore.ipfs_container_for_used_with]['dir']['data'] }}",
+        state: 'directory',
+        mode:  '755',
+        owner: "{{ application_owner }}",
+        group: "{{ application_owner_group }}" }
+    - { path: "{{ vars['ipfs_containers'][dcore.ipfs_container_for_used_with]['dir']['staging'] }}",
+        state: 'directory',
+        mode:  '755',
+        owner: "{{ application_owner }}",
+        group: "{{ application_owner_group }}" }
+  loop_control:
+    loop_var: required_ipfs_directories
+
+- name: "Template IPFS conf file ({{ processed_container }})"
+  template:
+    src:   "environments/{{ using_environment }}/files/ipfs/config.j2"
+    dest:  "{{ vars['ipfs_containers'][dcore.ipfs_container_for_used_with]['dir']['conf'] }}/config"
+    owner: "{{ application_owner }}"
+    group: "{{ application_owner_group }}"
+    mode:  0644
+  register: ipfs_cfg_files_change
+
+- name: "Clear the list of port which should be published for IPFS ({{ processed_container }})"
+  set_fact:
+    my_ipfs_port_list: []
+
+- name: "Create list of port which should be published for IPFS ({{ processed_container }})"
+  set_fact:
+    my_ipfs_port_list: "{{ my_ipfs_port_list | default([]) }} + \
+                   [ '{{ vars['ipfs_containers'][dcore.ipfs_container_for_used_with]['exposed_port_' + ports_for_publishing] }}:\
+                      {{ vars['ipfs_containers'][dcore.ipfs_container_for_used_with]['port_' + ports_for_publishing] }}' ]"
+  when: vars['ipfs_containers'][dcore.ipfs_container_for_used_with]['publish_' + ports_for_publishing]
+  with_items:
+    - api
+    - p2p
+    - gateway
+  loop_control:
+    loop_var: ports_for_publishing
+
+# - name: "DEBUG - list of published ports for IPFS ({{ processed_container }})"
+#   debug:
+#     var: my_ipfs_port_list
+
+- name: "Ensure IPFS Docker container is running ({{ processed_container }})"
+  docker_container:
+    name:  "{{ vars['ipfs_containers'][dcore.ipfs_container_for_used_with]['container_name'] }}"
+    image: "{{ vars['ipfs_containers'][dcore.ipfs_container_for_used_with]['image_name'] }}:{{ vars['ipfs_containers'][dcore.ipfs_container_for_used_with]['image_tag'] }}"
+    state: started
+    restart_policy: "unless-stopped"
+    ports: "{{ my_ipfs_port_list }}"
+    volumes:
+      - "{{ vars['ipfs_containers'][dcore.ipfs_container_for_used_with]['dir']['staging'] }}:/export"
+      - "{{ vars['ipfs_containers'][dcore.ipfs_container_for_used_with]['dir']['data'] }}:/data/ipfs"
+      # - "{{ dcore.ipfs.dir.conf }}/config:/data/ipfs/config:ro"
+  register: ipfs_deploy_change
+
+- name: "Restart IPFS docker container if needed"
+  docker_container:
+    name:    "{{ vars['ipfs_containers'][dcore.ipfs_container_for_used_with]['container_name'] }}"
+    state:   started
+    restart: yes
+  when: ipfs_cfg_files_change.changed and not ipfs_deploy_change.changed

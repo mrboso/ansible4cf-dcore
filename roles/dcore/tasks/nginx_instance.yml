@@ -1,0 +1,145 @@
+# - name: "DEBUG - setup nginx for {{ processed_container }} container"
+#   debug: var=dcore
+
+- name: "Pull nginx docker image ({{ processed_container }})"
+  docker_image:
+    state: present
+    name:  "{{ dcore.nginx.image_name }}"
+    tag:   "{{ dcore.nginx.image_tag }}"
+    force: yes
+
+- name: "Ensure directory exists for TLS certs ({{ processed_container }})"
+  become: no
+  connection: local
+  file:
+    path:  environments/{{ using_environment }}/files/nginx/ssl/{{ inventory_hostname }}_{{ dcore.nginx.container_name }}
+    state: directory
+
+- name: "Include of tasks for selfsigned CA - decrypting"
+  include_tasks: "nginx_decrypt_self_signed_ca.yml"
+  when: dcore.nginx.ssl_selfsigned
+
+- name: "Include of tasks for trusted CA - decrypting"
+  include_tasks: "nginx_decrypt_trusted_ca.yml"
+  when: not dcore.nginx.ssl_selfsigned
+
+- name: "Generate DH Parameters for nginx instance ({{ processed_container }})"
+  become: no
+  connection: local
+  openssl_dhparam:
+    path: environments/{{ using_environment }}/files/nginx/ssl/{{ inventory_hostname }}_{{ dcore.nginx.container_name }}/ssl-dhparams.pem
+    size: 2048
+
+- name: "Prepare directory structure ({{ processed_container }})"
+  file:
+    path:  "{{ required_nginx_directories.path }}"
+    state: "{{ required_nginx_directories.state }}"
+    mode:  "{{ required_nginx_directories.mode }}"
+    owner: "{{ required_nginx_directories.owner }}"
+    group: "{{ required_nginx_directories.group }}"
+  with_items:
+    - { path: "{{ dcore.nginx.dir.home }}",
+        state: 'directory',
+        mode:  '755',
+        owner: "{{ application_owner }}",
+        group: "{{ application_owner_group }}" }
+    - { path: "{{ dcore.nginx.dir.conf }}",
+        state: 'directory',
+        mode:  '755',
+        owner: "{{ application_owner }}",
+        group: "{{ application_owner_group }}" }
+    - { path: "{{ dcore.nginx.dir.data }}",
+        state: 'directory',
+        mode:  '755',
+        owner: "{{ application_owner }}",
+        group: "{{ application_owner_group }}" }
+    - { path: "{{ dcore.nginx.dir.logs }}",
+        state: 'directory',
+        mode:  '755',
+        owner: "{{ application_owner }}",
+        group: "{{ application_owner_group }}" }
+    - { path: "{{ dcore.nginx.dir.logs }}/nginx_access.log",
+        state: 'touch',
+        mode:  '644',
+        owner: "{{ application_owner }}",
+        group: "{{ application_owner_group }}" }
+    - { path: "{{ dcore.nginx.dir.logs }}/nginx_error.log",
+        state: 'touch',
+        mode:  '644',
+        owner: "{{ application_owner }}",
+        group: "{{ application_owner_group }}" }
+  loop_control:
+    loop_var: required_nginx_directories
+
+- name: "Copy files for nginx ({{ processed_container }})"
+  copy:
+    src:   "{{ required_nginx_crt_files.src }}"
+    dest:  "{{ required_nginx_crt_files.dest }}"
+    mode:  "{{ required_nginx_crt_files.mode }}"
+    owner: "{{ required_nginx_crt_files.owner }}"
+    group: "{{ required_nginx_crt_files.group }}"
+  with_items:
+    - { src:   'environments/{{ using_environment }}/files/nginx/ssl/{{ inventory_hostname }}_{{ dcore.nginx.container_name }}/fullchain.pem',
+        dest:  '{{ dcore.nginx.dir.conf }}/fullchain.pem',
+        mode:  '644',
+        owner: "{{ application_owner }}",
+        group: "{{ application_owner_group }}" }
+    - { src:   'environments/{{ using_environment }}/files/nginx/ssl/{{ inventory_hostname }}_{{ dcore.nginx.container_name }}/{{ inventory_hostname }}_{{ dcore.nginx.container_name }}.key',
+        dest:  '{{ dcore.nginx.dir.conf }}/privkey.key',
+        mode:  '600',
+        owner: "{{ application_owner }}",
+        group: "{{ application_owner_group }}" }
+    - { src:   'environments/{{ using_environment }}/files/nginx/ssl/{{ inventory_hostname }}_{{ dcore.nginx.container_name }}/ssl-dhparams.pem',
+        dest:  '{{ dcore.nginx.dir.conf }}/ssl-dhparams.pem',
+        mode:  '644',
+        owner: "{{ application_owner }}",
+        group: "{{ application_owner_group }}" }
+  register: nginx_crt_files_change
+  loop_control:
+    loop_var: required_nginx_crt_files
+
+- name: "Template nginx conf file"
+  template:
+    src:   "environments/{{ using_environment }}/files/nginx/nginx.conf.j2"
+    dest:  "{{ dcore.nginx.dir.conf }}/nginx.conf"
+    owner: "{{ application_owner }}"
+    group: "{{ application_owner_group }}"
+    mode:  0644
+  register: nginx_conf_files_change
+
+- name: "Ensure nginx Docker container is running ({{ processed_container }})"
+  docker_container:
+    name:  "{{ dcore.nginx.container_name }}"
+    image: "{{ dcore.nginx.image_name }}:{{ dcore.nginx.image_tag }}"
+    state: started
+    restart_policy: "unless-stopped"
+    recreate: "{{ 'yes' if container_deploy_change.changed else 'no' }}"
+    ports:
+      - "{{ dcore.nginx.exposed_port_http }}:{{ dcore.nginx.port_http }}"
+      - "{{ dcore.nginx.exposed_port_https }}:{{ dcore.nginx.port_https }}"
+      - "{{ dcore.nginx.exposed_port_status }}:{{ dcore.nginx.port_status }}"
+    links:
+      - "{{ dcore.container_name }}:dcore"
+    volumes:
+      - "{{ dcore.nginx.dir.conf }}/nginx.conf:/etc/nginx/conf.d/default.conf:ro"
+      - "{{ dcore.nginx.dir.logs }}/nginx_access.log:/var/log/nginx_access.log:rw"
+      - "{{ dcore.nginx.dir.logs }}/nginx_error.log:/var/log/nginx_error.log:rw"
+      - "{{ dcore.nginx.dir.conf }}/fullchain.pem:/etc/nginx/ssl/fullchain.pem:ro"
+      - "{{ dcore.nginx.dir.conf }}/privkey.key:/etc/nginx/ssl/privkey.key:ro"
+      - "{{ dcore.nginx.dir.conf }}/ssl-dhparams.pem:/etc/nginx/ssl/ssl-dhparams.pem:ro"
+  register: nginx_deploy_change
+
+- name: "Restart nginx docker container {{ processed_container }} if needed"
+  docker_container:
+    name:    "{{ dcore.nginx.container_name }}"
+    state:   started
+    restart: yes
+  when: ( nginx_crt_files_change.changed or nginx_conf_files_change.changed ) and not nginx_deploy_change.changed
+
+- name: "Include of tasks for selfsigned CA - encrypting"
+  include_tasks: "nginx_encrypt_self_signed_ca.yml"
+  when: dcore.nginx.ssl_selfsigned
+
+- name: "Include of tasks for trusted CA - encrypting"
+  include_tasks: "nginx_encrypt_trusted_ca.yml"
+  when: not dcore.nginx.ssl_selfsigned

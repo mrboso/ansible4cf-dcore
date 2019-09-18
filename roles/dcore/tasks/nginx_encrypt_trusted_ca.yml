@@ -1,0 +1,39 @@
+- name: "Vault: encrypt nginx instance ({{ processed_container }}) private key if it's in plain text - using trusted CA"
+  become: no
+  connection: local
+  shell: |
+          if `head -1 environments/{{ using_environment }}/files/nginx/ssl/{{ inventory_hostname }}_{{ dcore.nginx.container_name }}/{{ inventory_hostname }}_{{ dcore.nginx.container_name }}.key | grep -q 'PRIVATE KEY-----'`
+            then
+              ansible-vault encrypt environments/{{ using_environment }}/files/nginx/ssl/{{ inventory_hostname }}_{{ dcore.nginx.container_name }}/{{ inventory_hostname }}_{{ dcore.nginx.container_name }}.key
+              echo "environments/{{ using_environment }}/files/nginx/ssl/{{ inventory_hostname }}_{{ dcore.nginx.container_name }}/{{ inventory_hostname }}_{{ dcore.nginx.container_name }}.key has been encrypted"
+              exit 0
+          elif `head -1 environments/{{ using_environment }}/files/nginx/ssl/{{ inventory_hostname }}_{{ dcore.nginx.container_name }}/{{ inventory_hostname }}_{{ dcore.nginx.container_name }}.key | grep -q 'ANSIBLE_VAULT'`
+            then
+              echo "environments/{{ using_environment }}/files/nginx/ssl/{{ inventory_hostname }}_{{ dcore.nginx.container_name }}/{{ inventory_hostname }}_{{ dcore.nginx.container_name }}.key has not been touched"
+              exit 0
+          else
+            echo "environments/{{ using_environment }}/files/nginx/ssl/{{ inventory_hostname }}_{{ dcore.nginx.container_name }}/{{ inventory_hostname }}_{{ dcore.nginx.container_name }}.key is corrupted"
+            exit 100
+          fi
+  register: nginx_private_key_encrypt
+  changed_when: '".key has been encrypted" in nginx_private_key_encrypt.stdout '
+
+- name: "Vault: encrypt public CA private key if it's in plain text - using trusted CA"
+  become: no
+  connection: local
+  shell: |
+          if `head -1 {{ public_ca_path }}/public.key | grep -q 'PRIVATE KEY-----'`
+            then
+              ansible-vault encrypt {{ public_ca_path }}/public.key
+              echo "{{ public_ca_path }}/public.key has been encrypted"
+              exit 0
+          elif `head -1 {{ public_ca_path }}/public.key | grep -q 'ANSIBLE_VAULT'`
+            then
+              echo "{{ public_ca_path }}/public.key has not been touched"
+              exit 0
+          else
+            echo "{{ public_ca_path }}/public.key is corrupted"
+            exit 100
+          fi
+  register: public_ca_private_key_encrypt
+  changed_when: '".key has been encrypted" in public_ca_private_key_encrypt.stdout '

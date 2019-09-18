@@ -1,0 +1,33 @@
+- name: "Delete decrypted copy of the CA key file"
+  become: no
+  connection: local
+  file:
+    dest:  "{{ private_ca_path }}/{{ using_environment }}_ca.decrypted.key"
+    state: absent
+
+- name: "Delete decrypted copy of the nginx instance ({{ processed_container }}) key file"
+  become: no
+  connection: local
+  file:
+    dest:  "environments/{{ using_environment }}/files/nginx/ssl/{{ inventory_hostname }}_{{ dcore.nginx.container_name }}/{{ inventory_hostname }}_{{ dcore.nginx.container_name }}.decrypted.key"
+    state: absent
+
+- name: "Vault: encrypt nginx instance ({{ processed_container }}) private key if it's in plain text"
+  become: no
+  connection: local
+  shell: |
+          if `head -1 environments/{{ using_environment }}/files/nginx/ssl/{{ inventory_hostname }}_{{ dcore.nginx.container_name }}/{{ inventory_hostname }}_{{ dcore.nginx.container_name }}.key | grep -q 'PRIVATE KEY-----'`
+            then
+              ansible-vault encrypt environments/{{ using_environment }}/files/nginx/ssl/{{ inventory_hostname }}_{{ dcore.nginx.container_name }}/{{ inventory_hostname }}_{{ dcore.nginx.container_name }}.key
+              echo "environments/{{ using_environment }}/files/nginx/ssl/{{ inventory_hostname }}_{{ dcore.nginx.container_name }}/{{ inventory_hostname }}_{{ dcore.nginx.container_name }}.key has been encrypted"
+              exit 0
+          elif `head -1 environments/{{ using_environment }}/files/nginx/ssl/{{ inventory_hostname }}_{{ dcore.nginx.container_name }}/{{ inventory_hostname }}_{{ dcore.nginx.container_name }}.key | grep -q 'ANSIBLE_VAULT'`
+            then
+              echo "environments/{{ using_environment }}/files/nginx/ssl/{{ inventory_hostname }}_{{ dcore.nginx.container_name }}/{{ inventory_hostname }}_{{ dcore.nginx.container_name }}.key has not been touched"
+              exit 0
+          else
+            echo "environments/{{ using_environment }}/files/nginx/ssl/{{ inventory_hostname }}_{{ dcore.nginx.container_name }}/{{ inventory_hostname }}_{{ dcore.nginx.container_name }}.key is corrupted"
+            exit 100
+          fi
+  register: nginx_private_key_encrypt
+  changed_when: '".key has been encrypted" in nginx_private_key_encrypt.stdout '

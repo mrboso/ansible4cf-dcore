@@ -1,0 +1,27 @@
+- name: "Set facts for public_ca_path"
+  set_fact:
+    public_ca_path: "environments/{{ using_environment }}/files/public_ca"
+
+- name: "Generate an OpenSSL private key for nginx instance ({{ processed_container }}) - using trusted CA"
+  become: no
+  connection: local
+  shell: |
+          cp {{ public_ca_path }}/public.key \
+          environments/{{ using_environment }}/files/nginx/ssl/{{ inventory_hostname }}_{{ dcore.nginx.container_name }}/{{ inventory_hostname }}_{{ dcore.nginx.container_name }}.key
+
+- name: "Generate a Self Signed OpenSSL certificate for nginx instance ({{ processed_container }}) - using trusted CA"
+  become: no
+  connection: local
+  shell: |
+          cp {{ public_ca_path }}/public.crt \
+          environments/{{ using_environment }}/files/nginx/ssl/{{ inventory_hostname }}_{{ dcore.nginx.container_name }}/{{ inventory_hostname }}_{{ dcore.nginx.container_name }}.crt
+
+- name: "Generate merged Self Signed OpenSSL certificate for nginx instance ({{ processed_container }}) - using trusted CA"
+  become: no
+  connection: local
+  shell: >-
+            cat nginx/ssl/{{ inventory_hostname }}_{{ dcore.nginx.container_name }}/{{ inventory_hostname }}_{{ dcore.nginx.container_name }}.crt \
+            public_ca/ca_bundle.crt > \
+            nginx/ssl/{{ inventory_hostname }}_{{ dcore.nginx.container_name }}/fullchain.pem
+  args:
+    chdir:   "environments/{{ using_environment }}/files/"

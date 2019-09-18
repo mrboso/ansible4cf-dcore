@@ -1,0 +1,10 @@
+- hosts: localhost
+  become: yes
+  become_user: root
+  become_method: sudo
+  pre_tasks:
+  vars_files:
+    /tmp/dcoreAnsibleVars.yaml
+  roles:
+    - role: dcore
+      tags: dcore

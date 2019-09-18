@@ -1,0 +1,217 @@
+# - name: "DEBUG - processed container"
+#   debug: var=processed_container
+
+- name: "Set facts for processed container ({{ processed_container }})"
+  set_fact:
+    dcore: "{{ dcore_containers[processed_container] }}"
+
+# - name: "DEBUG - value of dcore variable for {{ processed_container }} container"
+#   debug: var=dcore
+
+- name: "Include ipfs_instance.yml task for dcore container ({{ processed_container }})"
+  include_tasks: ipfs_instance.yml
+  when: dcore.ipfs_allowed
+
+- name: "Clear the list of port which should be published ({{ processed_container }})"
+  set_fact:
+    my_port_list: []
+
+- name: "Create list of port which should be published ({{ processed_container }})"
+  set_fact:
+    my_port_list: "{{ my_port_list | default([]) }} + [ '{{ vars['dcore']['exposed_port_' + ports_for_publishing] }}:{{ vars['dcore']['port_' + ports_for_publishing] }}' ]"
+  when: vars['dcore']['publish_' + ports_for_publishing]
+  with_items:
+    - rpc
+    - p2p
+  loop_control:
+    loop_var: ports_for_publishing
+
+# - name: "DEBUG - list of published ports ({{ processed_container }})"
+#   debug:
+#     var: my_port_list
+
+- name: "Clear the list of links ({{ processed_container }})"
+  set_fact:
+    dcore_instance_links_list: []
+
+- name: "Create list of of links ({{ processed_container }})"
+  set_fact:
+    dcore_instance_links_list: "[ \"{{ vars['dcore']['witness_container_name_for_linking'] }}:seed_node\" ]"
+  when: dcore.witness_container_name_for_linking is defined
+
+# - name: "DEBUG - list of links ({{ processed_container }})"
+#   debug:
+#     var: dcore_instance_links_list
+
+- name: "Clear the list of volumes ({{ processed_container }})"
+  set_fact:
+    dcore_instance_volumes_list: []
+
+- name: "Clear the list of dcore extra args ({{ processed_container }})"
+  set_fact:
+    dcore_instance_volumes_list: []
+
+# - name: "Create list of of dcore extra args for non mainnet dcore instance ({{ processed_container }})"
+#   set_fact:
+#     dcore_extra_args: "\"--genesis-json /root/.decent/genesis.json\""
+#   when: dcore.decent_net_name != "mainnet"
+
+# - name: "DEBUG - list of dcore extra args ({{ processed_container }})"
+#   debug:
+#     var: dcore_extra_args
+
+- name: "Pull dcore docker image ({{ processed_container }})"
+  docker_image:
+    state: present
+    force: yes
+    name:  "{{ dcore.image_name }}"
+    tag:   "{{ dcore.image_tag }}"
+
+- name: "Prepare directory structure ({{ processed_container }})"
+  file:
+    path:  "{{ required_directories.path }}"
+    state: "{{ required_directories.state }}"
+    mode:  "{{ required_directories.mode }}"
+    owner: "{{ required_directories.owner }}"
+    group: "{{ required_directories.group }}"
+  with_items:
+    - { path: "{{ dcore.dir.home }}",
+        state: 'directory',
+        mode:  '755',
+        owner: "{{ application_owner }}",
+        group: "{{ application_owner_group }}" }
+    - { path: "{{ dcore.dir.conf }}",
+        state: 'directory',
+        mode:  '755',
+        owner: "{{ application_owner }}",
+        group: "{{ application_owner_group }}" }
+    - { path: "{{ dcore.dir.data }}",
+        state: 'directory',
+        mode:  '755',
+        owner: '1000',
+        group: '1000' }
+    - { path: "{{ dcore.dir.packages }}",
+        state: 'directory',
+        mode:  '755',
+        owner: '1000',
+        group: '1000' }
+  loop_control:
+    loop_var: required_directories
+
+- name: "Copy files for dcore ({{ processed_container }})"
+  copy:
+    src:   "{{ required_files.src }}"
+    dest:  "{{ required_files.dest }}"
+    mode:  "{{ required_files.mode }}"
+    owner: "{{ required_files.owner }}"
+    group: "{{ required_files.group }}"
+  with_items:
+    - { src: 'environments/{{ using_environment }}/files/dcore/{{ dcore.decent_net_name }}__genesis.json',
+        dest: '{{ dcore.dir.conf }}/genesis.json',
+        mode: '644',
+        owner: "{{ application_owner }}",
+        group: "{{ application_owner_group }}" }
+    - { src: 'environments/{{ using_environment }}/files/dcore/{{ dcore.decent_net_name }}__api-access.json',
+        dest: '{{ dcore.dir.conf }}/api-access.json',
+        mode: '644',
+        owner: "{{ application_owner }}",
+        group: "{{ application_owner_group }}" }
+  register: conf_files_change
+  when: dcore.decent_net_name != "mainnet"
+  loop_control:
+    loop_var: required_files
+
+- name: "Template dcore config.ini file ({{ processed_container }})"
+  template:
+    src:   "environments/{{ using_environment }}/files/dcore/{{ dcore.decent_net_name }}__{{ dcore.role }}_config.ini.j2"
+    dest:  "{{ dcore.dir.data }}/config.ini"
+    owner: "{{ application_owner }}"
+    group: "{{ application_owner_group }}"
+    mode:  0644
+  when: dcore.decent_net_name != "mainnet"
+  register: config_file_change
+
+- name: "Create list of of volumes for non mainnet dcore instance ({{ processed_container }})"
+  set_fact:
+    dcore_instance_volumes_list: "{{ dcore_instance_volumes_list | default([]) }} + [ \"{{ volumes_for_mounting }}\" ]"
+  with_items:
+      - "{{ dcore.dir.conf }}/genesis.json:/home/dcore/.decent/genesis.json:ro"
+      - "{{ dcore.dir.conf }}/api-access.json:/home/dcore/.decent/api-access.json:ro"
+      - "{{ dcore.dir.data }}:/home/dcore/.decent/data/decentd"
+      - "{{ dcore.dir.packages }}:/home/dcore/.decent/packages"
+  loop_control:
+    loop_var: volumes_for_mounting
+  when: dcore.decent_net_name != "mainnet"
+
+- name: "Create list of of volumes for mainnet dcore instance ({{ processed_container }})"
+  set_fact:
+    dcore_instance_volumes_list: "{{ dcore_instance_volumes_list | default([]) }} + [ \"{{ volumes_for_mounting_mainnet_instance }}\" ]"
+  with_items:
+      - "{{ dcore.dir.data }}:/home/dcore/.decent/data/decentd"
+  loop_control:
+    loop_var: volumes_for_mounting_mainnet_instance
+  when: dcore.decent_net_name == "mainnet"
+
+# - name: "DEBUG - list of volumes ({{ processed_container }})"
+#   debug:
+#     var: dcore_instance_volumes_list
+
+- name: "Ensure dcore Docker container is running ({{ processed_container }})"
+  docker_container:
+    name:           "{{ dcore.container_name }}"
+    image:          "{{ dcore.image_name }}:{{ dcore.image_tag }}"
+    hostname:       "{{ dcore.container_name }}"
+    state:          started
+    restart_policy: "unless-stopped"
+    ports:          "{{ my_port_list }}"
+    links:          "{{ dcore_instance_links_list }}"
+    volumes:        "{{ dcore_instance_volumes_list }}"
+    # env:
+    #   DCORE_EXTRA_ARGS: "{{ dcore_extra_args }}"
+  register: container_deploy_change
+
+- name: "Restart dcore docker container {{ processed_container }} if needed"
+  docker_container:
+    name:    "{{ dcore.container_name }}"
+    state:   started
+    restart: yes
+  when: ( conf_files_change.changed or config_file_change.changed ) and not container_deploy_change.changed
+
+- name: "Copy api-access file for dcore ({{ processed_container }}) if mainnet"
+  copy:
+    src:   "environments/{{ using_environment }}/files/dcore/{{ dcore.decent_net_name }}__api-access.json"
+    dest:  "{{ dcore.dir.data }}/api-access.json"
+    mode:  0644
+    owner: "{{ application_owner }}"
+    group: "{{ application_owner_group }}"
+  register: mainnet_api_access_file_copy
+  when: dcore.decent_net_name == "mainnet"
+
+- name: "Add api-access value into dcore confing file ({{ processed_container }}) if mainnet"
+  lineinfile:
+    path:   "{{ dcore.dir.data }}/config.ini"
+    regexp: "^#* *api-access *= *.*"
+    line:   "api-access = /home/dcore/.decent/data/decentd/api-access.json"
+    backup: no
+  register: mainnet_api_access_conf_insert
+  when: dcore.decent_net_name == "mainnet"
+
+- name: "Add p2p-endpoint value into dcore confing file ({{ processed_container }}) if mainnet"
+  lineinfile:
+    path:   "{{ dcore.dir.data }}/config.ini"
+    regexp: "^#* *p2p-endpoint = *.*"
+    line:   "p2p-endpoint = 0.0.0.0:{{ dcore.port_p2p }}"
+    backup: no
+  register: mainnet_p2p_endpoint_conf_insert
+  when: dcore.decent_net_name == "mainnet" and dcore.publish_p2p
+
+- name: "Restart dcore docker container {{ processed_container }} if needed"
+  docker_container:
+    name:    "{{ dcore.container_name }}"
+    state:   started
+    restart: yes
+  when: mainnet_api_access_file_copy.changed or mainnet_api_access_conf_insert.changed or mainnet_p2p_endpoint_conf_insert.changed
+
+- name: "Include nginx_instance.yml task for dcore container"
+  include_tasks: nginx_instance.yml
+  when: dcore.nginx_allowed
