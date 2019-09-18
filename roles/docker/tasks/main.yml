@@ -1,0 +1,14 @@
+- include_tasks: "centos_part_1.yml"
+  when: ansible_os_family == 'RedHat'
+
+- include_tasks: "ubuntu_part_1.yml"
+  when: ansible_os_family == 'Debian'
+
+- name: "Starting docker engine"
+  service:
+    name: docker
+    state: started
+    enabled: yes
+
+- include_tasks: "centos_part_2.yml"
+  when: ansible_os_family == 'RedHat'

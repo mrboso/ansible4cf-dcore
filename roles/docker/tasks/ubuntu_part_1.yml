@@ -1,0 +1,32 @@
+- name: "Debian - Add Docker repository GPG key"
+  apt_key:
+    url:   https://download.docker.com/linux/ubuntu/gpg
+    id: 9DC858229FC7DD38854AE2D88D81803C0EBFCD88
+    state: present
+
+- name: "Debian - Add Docker repository"
+  apt_repository:
+    repo: "{{ docker_apt_repository }}"
+    state: present
+    update_cache: true
+
+- name: "Debian - Installing docker"
+  apt:
+    name:
+      - docker-ce
+      - docker-ce-cli
+      - containerd.io
+    state: latest
+    update_cache: yes
+
+- name: "Debian - Installing pip"
+  apt:
+    name:
+      - python-pip
+    state: latest
+    update_cache: yes
+
+- name: "Debian - Installing python libraries"
+  pip:
+    name:
+      - docker-py

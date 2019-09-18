@@ -1,0 +1,18 @@
+- name: "RHEL - Gather facts about docker0 network"
+  setup:
+
+# - name: "Firewalld - allow traffic from docker0 to host"
+#   firewalld:
+#     source: "{{ ansible_docker0.ipv4.network }}/16"
+#     permanent: yes
+#     state: enabled
+#   notify: "Restart firewalld"
+#   when: allow_fw_modification_4docker
+
+- name: "RHEL - Firewalld - allow traffic from docker0 to host"
+  firewalld:
+    rich_rule: rule family="ipv4" source address="{{ ansible_docker0.ipv4.network }}/16" accept
+    immediate: yes
+    permanent: yes
+    state: enabled
+  when: allow_fw_modification_4docker | bool

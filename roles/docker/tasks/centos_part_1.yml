@@ -1,0 +1,29 @@
+- name: "RHEL - Installing docker prerequisite packages"
+  yum:
+    name:
+      - yum-utils
+      - device-mapper-persistent-data
+      - lvm2
+    state: latest
+
+- name: "RHEL - Add Docker GPG key"
+  rpm_key:
+    key: https://download.docker.com/linux/centos/gpg
+    state: present
+
+- name: "RHEL - Add Docker repository"
+  get_url:
+    url: https://download.docker.com/linux/centos/docker-ce.repo
+    dest: /etc/yum.repos.d/docer-ce.repo
+    owner: root
+    group: root
+    mode: 0644
+
+- name: "RHEL - Installing docker"
+  yum:
+    name:
+      - docker-ce
+      - docker-ce-cli
+      - containerd.io
+      - python-docker-py
+    state: latest
