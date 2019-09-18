@@ -1,0 +1,8 @@
+- hosts: localhost
+  become: yes
+  become_user: root
+  become_method: sudo
+  pre_tasks:
+  roles:
+    - role: docker
+      tags: docker
