@@ -3,6 +3,8 @@
   become_user: root
   become_method: sudo
   pre_tasks:
+  vars_files:
+    dcoreAnsibleVars.yaml
   roles:
     - role: private_ca
       tags: private_ca
