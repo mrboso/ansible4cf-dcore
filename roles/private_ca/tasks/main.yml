@@ -1,0 +1,133 @@
+- name: "Set facts for private_ca_path"
+  set_fact:
+    private_ca_path: "environments/{{ using_environment }}/files/private_ca"
+
+- name: "Ensure directory exists for private CA"
+  file:
+    path:  "{{ private_ca_path }}/"
+    state: directory
+
+- name: "Check if CA private key file exists"
+  stat:
+    path: "{{ private_ca_path }}/{{ using_environment }}_ca.key"
+  register: ca_private_key_file_existence
+
+# - name: "DEBUG: Check if CA private key file exists"
+#   debug: var=ca_private_key_file_existence
+
+- name: "Generate an OpenSSL private key for CA"
+  openssl_privatekey:
+    path: "{{ private_ca_path }}/{{ using_environment }}_ca.key"
+  when: not ca_private_key_file_existence.stat.exists
+
+- name: "Vault: get modulus of CA private key if present"
+  shell: |
+          if `head -1 {{ private_ca_path }}/{{ using_environment }}_ca.key | grep -q 'ANSIBLE_VAULT'`
+            then
+              ansible-vault view {{ private_ca_path }}/{{ using_environment }}_ca.key | \
+              openssl rsa -noout -modulus | openssl md5 | awk '{ print $2 }'
+          elif `head -1 {{ private_ca_path }}/{{ using_environment }}_ca.key | grep -q 'PRIVATE KEY-----'`
+            then
+              cat {{ private_ca_path }}/{{ using_environment }}_ca.key | openssl rsa -noout -modulus | openssl md5 | awk '{ print $2 }'
+          else
+            echo "not_valid_SSL_key"
+          fi
+  register: ca_key_modulus
+
+# - name: "DEBUG: Print modulus from CA private key"
+#   debug: var=ca_key_modulus.stdout
+
+- name: "Generate an OpenSSL private key for CA if the file is not valid SSL key"
+  openssl_privatekey:
+    path: "{{ private_ca_path }}/{{ using_environment }}_ca.key"
+  when: ca_key_modulus.stdout == "not_valid_SSL_key"
+
+- name: "Check if CA CRT file exists"
+  stat:
+    path: "{{ private_ca_path }}/{{ using_environment }}_ca.crt"
+  register: ca_crt_file_existence
+
+- name: "Vault: get modulus of CA CRT if present"
+  shell: |
+          if `head -1 {{ private_ca_path }}/{{ using_environment }}_ca.crt | grep -q 'BEGIN CERTIFICATE'`
+            then
+              cat {{ private_ca_path }}/{{ using_environment }}_ca.crt | openssl x509 -noout -modulus | openssl md5 | awk '{ print $2 }'
+            else
+              echo "not_valid_SSL_certificate"
+          fi
+  register: ca_crt_modulus
+  when: ca_crt_file_existence.stat.exists
+
+# - name: "DEBUG: Print modulus from CA CRT"
+#   debug: var=ca_crt_modulus.stdout
+
+- name: "Compare CA private key modulus with CA CRT modulus - part 1"
+  set_fact:
+    private_key_and_crt_match: false
+  when: ca_crt_modulus.stdout is not defined
+
+- name: "Compare CA private key modulus with CA CRT modulus - part 2"
+  set_fact:
+    private_key_and_crt_match: "{{ 'false' if ca_key_modulus.stdout != ca_crt_modulus.stdout else 'true' }}"
+  when: ca_crt_modulus.stdout is defined
+
+# - name: "DEBUG: Print CA key and CA CRT modulus"
+#   debug: var=private_key_and_crt_match
+
+- name: "Create decrypted copy of the CA key file"
+  copy:
+    src:  "{{ private_ca_path }}/{{ using_environment }}_ca.key"
+    dest: "{{ private_ca_path }}/{{ using_environment }}_ca.decrypted.key"
+    mode: 0600
+  when: not private_key_and_crt_match
+
+- name: "Generate an OpenSSL CSR for private CA"
+  openssl_csr:
+    path:                     "{{ private_ca_path }}/{{ using_environment }}_ca.csr"
+    privatekey_path:          "{{ private_ca_path }}/{{ using_environment }}_ca.decrypted.key"
+    country_name:             "{{ private_ca.country_name }}"
+    state_or_province_name:   "{{ private_ca.state_or_province_name }}"
+    organization_name:        "{{ private_ca.organization_name }}"
+    organizational_unit_name: "{{ private_ca.organizational_unit_name }}"
+    locality_name:            "{{ private_ca.locality_name }}"
+    email_address:            "{{ private_ca.email_address }}"
+    common_name:              "{{ using_environment }}_ca"
+  when: not private_key_and_crt_match
+
+- name: "Generate an OpenSSL CRT for private CA"
+  command: >-
+            openssl req -x509 -nodes
+            -key {{ using_environment }}_ca.decrypted.key
+            -in {{ using_environment }}_ca.csr
+            -sha256
+            -days {{ private_ca.validity_in_days }}
+            -out {{ using_environment }}_ca.crt
+  args:
+    chdir:    "{{ private_ca_path }}/"
+  when: not private_key_and_crt_match
+
+- name: "Delete decrypted copy of the CA key file"
+  file:
+    dest:  "{{ private_ca_path }}/{{ using_environment }}_ca.decrypted.key"
+    state: absent
+
+- name: "Vault: encrypt CA private key if it's in plain text"
+  shell: |
+          if `head -1 {{ private_ca_path }}/{{ using_environment }}_ca.key | grep -q 'PRIVATE KEY-----'`
+            then
+              ansible-vault encrypt {{ private_ca_path }}/{{ using_environment }}_ca.key
+              echo "{{ private_ca_path }}/{{ using_environment }}_ca.key has been encrypted"
+              exit 0
+          elif `head -1 {{ private_ca_path }}/{{ using_environment }}_ca.key | grep -q 'ANSIBLE_VAULT'`
+            then
+              echo "{{ private_ca_path }}/{{ using_environment }}_ca.key has not been touched"
+              exit 0
+          else
+            echo "{{ private_ca_path }}/{{ using_environment }}_ca.key is corrupted"
+            exit 100
+          fi
+  register: ca_private_key_encrypt
+  changed_when: '"ca.key has been encrypted" in ca_private_key_encrypt.stdout '
+
+# - name: "DEBUG: CA key encrypt"
+#   debug: var=ca_private_key_encrypt
