@@ -43,6 +43,28 @@ dcore_containers:
         data: "/opt/decent/nginx_s/data"
         logs: "/opt/decent/nginx_s/logs"
     ipfs_allowed: Replace_DcoreAllowIPFS
+    ipfs_container_for_used_with: "ipfs"
+ipfs_containers:
+  ipfs:
+    container_name: "ipfs"
+    image_name: "ipfs/go-ipfs"
+    image_tag: "v0.4.20"
+    publish_p2p: true
+    port_p2p: 4001
+    exposed_port_p2p: 4001
+    publish_api: true
+    port_api: 5001
+    exposed_port_api: 5001
+    publish_gateway: true
+    port_gateway: 8080
+    exposed_port_gateway: 8080
+    storage_max: "10GB"
+    dir:
+      home:    "/opt/decent/ipfs"
+      conf:    "/opt/decent/ipfs/conf"
+      data:    "/opt/decent/ipfs/data"
+      staging: "/opt/decent/ipfs/staging"
+
 private_ca:
   country_name:             SK
   state_or_province_name:   Slovakia
