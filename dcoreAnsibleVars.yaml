@@ -1,5 +1,5 @@
 ---
-using_environment: Replace_DcoreNetName
+using_environment: "Replace_DcoreNetName"
 application_owner: dcore
 application_owner_group: dcore
 dcore_containers:
@@ -7,7 +7,7 @@ dcore_containers:
     role: "seeder"
     container_name: "dcore_s"
     image_name: "decentnetwork/dcore.ubuntu"
-    image_tag: Replace_DcoreImageTag
+    image_tag: "Replace_DcoreImageTag"
     publish_rpc: false
     port_rpc: 8090
     exposed_port_rpc: 8090
@@ -19,7 +19,7 @@ dcore_containers:
       conf:     "/opt/decent/dcore_s/conf"
       data:     "/opt/decent/dcore_s/data"
       packages: "/opt/decent/dcore_s/packages"
-    decent_net_name: Replace_DcoreNetName
+    decent_net_name: "Replace_DcoreNetName"
     logger_level:
       default: "info"
       p2p: "error"
@@ -27,14 +27,14 @@ dcore_containers:
     nginx_allowed: Replace_DcoreAllowNginx
     nginx:
       container_name: "nginx_s"
-      server_name: "mainnet-eu1.dcore.io"
+      server_name: "Replace_DcoreNginxSslCN"
       image_name: "nginx"
       image_tag: "1.17.3"
       port_http: 80
       exposed_port_http: 80
       port_https: 443
       exposed_port_https: 443
-      ssl_selfsigned: true
+      ssl_selfsigned: Replace_DcoreNginxSslSelfsigned
       port_status: 9090
       exposed_port_status: 9090
       dir:
