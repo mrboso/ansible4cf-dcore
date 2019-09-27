@@ -1,7 +1,7 @@
 ---
 using_environment: "Replace_DcoreNetName"
-application_owner: dcore
-application_owner_group: dcore
+application_owner: "Replace_DcoreUserName"
+application_owner_group: "Replace_DcoreUserName"
 dcore_containers:
   dcore_s:
     role: "seeder"
