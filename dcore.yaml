@@ -4,7 +4,7 @@
   become_method: sudo
   pre_tasks:
   vars_files:
-    - dcoreAnsibleVars.yaml
+    dcoreAnsibleVars.yaml
   roles:
     - role: dcore
       tags: dcore
