@@ -8,12 +8,13 @@ dcore_containers:
     container_name: "dcore_s"
     image_name: "decentnetwork/dcore.ubuntu"
     image_tag: "Replace_DcoreImageTag"
-    publish_rpc: false
+    publish_rpc: true
     port_rpc: 8090
     exposed_port_rpc: 8090
     publish_p2p: true
     port_p2p: 40000
     exposed_port_p2p: Replace_DcoreP2Pport
+    seed_node: "Replace_DcoreSeedNode"
     dir:
       home:     "/opt/decent/dcore_s"
       conf:     "/opt/decent/dcore_s/conf"
