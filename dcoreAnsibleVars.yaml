@@ -4,13 +4,12 @@ application_owner: "Replace_DcoreUserName"
 application_owner_group: "Replace_DcoreUserName"
 dcore_containers:
   dcore_s:
-    role: "seeder"
     container_name: "dcore_s"
     image_name: "decentnetwork/dcore.ubuntu"
     image_tag: "Replace_DcoreImageTag"
-    publish_rpc: true
+    publish_rpc: Replace_DcoreExposeRPCPort
     port_rpc: 8090
-    exposed_port_rpc: 8090
+    exposed_port_rpc: Replace_DcoreRPCport
     publish_p2p: true
     port_p2p: 40000
     exposed_port_p2p: Replace_DcoreP2Pport
@@ -21,10 +20,29 @@ dcore_containers:
       data:     "/opt/decent/dcore_s/data"
       packages: "/opt/decent/dcore_s/packages"
     decent_net_name: "Replace_DcoreNetName"
-    logger_level:
-      default: "info"
-      p2p: "error"
-      transfer: "error"
+    # START - dcore config.ini parameters
+    role_custom: Replace_DcoreRoleCustom                             # boolean - has precedense over other roles. If true, all other config.ini paramaters will be ignored
+    role_custom_name: "Replace_DcoreRoleCustomName"                  # string - config with this name will be used unmodified
+    role_miner: Replace_DcoreRoleMiner                                # boolean - if the config should be modified as for miner
+    role_seeder: Replace_DcoreRoleSeeder                              # boolean - if the config should be modified as for seeder
+    seed_node: Replace_DcoreSeedNode                                    # "~" | list of strings - definition of known blockchain nodes in internet
+    ipfs_allowed: Replace_DcoreAllowIPFS                           # boolean - if IPFS will be used with dcore instance
+    ipfs_container_for_used_with: "ipfs"
+    enable_stale_production: Replace_DcoreEnableStalProduction           # boolean - if allow creation of block even if empty slots in BC are found
+    required_miners_participation: Replace_DcoreRequiredMinersParticipation     # integer - how many miner in % must be participating
+    miner_id: Replace_DcoreMinerID                                      # list - list of IDs (required if role_miner is true)
+    miner_private_key: Replace_DcoreMinerPrivateKey                             # list - list of private keys to mentioned IDs (required if role_miner is true)
+    seeder: Replace_DcoreSeeder                                        # list - list of IDs (required if role_seeder is true)
+    seeder_private_key: Replace_DcoreSeederPrivateKey                            # list - list of private keys to mentioned IDs (required if role_seeder is true)
+    content_private_key: Replace_DcoreContentPrivateKey                           # list - list of El Gamal content private keys to mentioned IDs (required if role_seeder is true)
+    free_space: Replace_DcoreFreeSpace                               # integer - how much space you want to allocate for seeding (in MB)
+    seeding_price: Replace_DcoreSeedingPrice                              # float - price per MB of seeding space
+    transaction_id_history: Replace_DcoreTransactionIDHistory                    # boolean - wheather to allow ID of transaction in history
+    logger_level:                                   # log level definition for each type of log message
+      default: "Replace_DcoreLogLevelDefault"                               # string "debug" | "info" | "warning" | "error"
+      p2p: "Replace_DcoreLogLevelP2P"                                  # string "debug" | "info" | "warning" | "error"
+      transfer: "Replace_DcoreLogLevelTransfer"                             # string "debug" | "info" | "warning" | "error"
+    # END - dcore config.ini parameters
     nginx_allowed: Replace_DcoreAllowNginx
     nginx:
       container_name: "nginx_s"
@@ -43,8 +61,6 @@ dcore_containers:
         conf: "/opt/decent/nginx_s/conf"
         data: "/opt/decent/nginx_s/data"
         logs: "/opt/decent/nginx_s/logs"
-    ipfs_allowed: Replace_DcoreAllowIPFS
-    ipfs_container_for_used_with: "ipfs"
 ipfs_containers:
   ipfs:
     container_name: "ipfs"

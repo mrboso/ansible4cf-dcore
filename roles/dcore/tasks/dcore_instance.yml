@@ -30,19 +30,6 @@
 #   debug:
 #     var: my_port_list
 
-- name: "Clear the list of links ({{ processed_container }})"
-  set_fact:
-    dcore_instance_links_list: []
-
-- name: "Create list of of links ({{ processed_container }})"
-  set_fact:
-    dcore_instance_links_list: "[ \"{{ vars['dcore']['witness_container_name_for_linking'] }}:seed_node\" ]"
-  when: dcore.witness_container_name_for_linking is defined
-
-# - name: "DEBUG - list of links ({{ processed_container }})"
-#   debug:
-#     var: dcore_instance_links_list
-
 - name: "Clear the list of volumes ({{ processed_container }})"
   set_fact:
     dcore_instance_volumes_list: []
@@ -50,15 +37,6 @@
 - name: "Clear the list of dcore extra args ({{ processed_container }})"
   set_fact:
     dcore_instance_volumes_list: []
-
-# - name: "Create list of of dcore extra args for non mainnet dcore instance ({{ processed_container }})"
-#   set_fact:
-#     dcore_extra_args: "\"--genesis-json /root/.decent/genesis.json\""
-#   when: dcore.decent_net_name != "mainnet"
-
-# - name: "DEBUG - list of dcore extra args ({{ processed_container }})"
-#   debug:
-#     var: dcore_extra_args
 
 - name: "Pull dcore docker image ({{ processed_container }})"
   docker_image:
@@ -111,7 +89,7 @@
         mode: '644',
         owner: "{{ application_owner }}",
         group: "{{ application_owner_group }}" }
-    - { src: 'environments/{{ using_environment }}/files/dcore/{{ dcore.decent_net_name }}__api-access.json',
+    - { src: 'environments/{{ using_environment }}/files/dcore/api-access.json',
         dest: '{{ dcore.dir.conf }}/api-access.json',
         mode: '644',
         owner: "{{ application_owner }}",
@@ -121,14 +99,24 @@
   loop_control:
     loop_var: required_files
 
-- name: "Template dcore config.ini file ({{ processed_container }})"
+- name: "Template dcore config.ini file ({{ processed_container }}) for non custom role"
   template:
-    src:   "environments/{{ using_environment }}/files/dcore/{{ dcore.decent_net_name }}__{{ dcore.role }}_config.ini.j2"
+    src:   "environments/{{ using_environment }}/files/dcore/config.ini.j2"
     dest:  "{{ dcore.dir.data }}/config.ini"
     owner: "{{ application_owner }}"
     group: "{{ application_owner_group }}"
     mode:  0644
-  when: dcore.decent_net_name != "mainnet"
+  when: dcore.decent_net_name != "mainnet" and not dcore.role_custom
+  register: config_file_change
+
+- name: "Copy dcore config.ini file ({{ processed_container }}) for custom role"
+  copy:
+    src:   "environments/{{ using_environment }}/files/dcore/{{ dcore.role_custom_name }}"
+    dest:  "{{ dcore.dir.data }}/config.ini"
+    owner: "{{ application_owner }}"
+    group: "{{ application_owner_group }}"
+    mode:  0644
+  when: dcore.decent_net_name != "mainnet" and dcore.role_custom
   register: config_file_change
 
 - name: "Create list of of volumes for non mainnet dcore instance ({{ processed_container }})"
@@ -156,15 +144,24 @@
 #   debug:
 #     var: dcore_instance_volumes_list
 
+- name: "Create a dictionary of etc_hosts entries if nothing explicitely defined in configuration"
+  set_fact:
+    my_etc_hosts: "{ '{{ inventory_hostname }}': '{{ ansible_default_ipv4.address }}'}"
+
+- name: "Add to a dictionary of etc_hosts entries if something is explicitely defined in configuration"
+  set_fact:
+    my_etc_hosts: "{{ dcore.docker_etc_hosts | combine(my_etc_hosts) }}"
+  when: dcore.docker_etc_hosts is defined
+
 - name: "Ensure dcore Docker container is running ({{ processed_container }})"
   docker_container:
     name:           "{{ dcore.container_name }}"
     image:          "{{ dcore.image_name }}:{{ dcore.image_tag }}"
     hostname:       "{{ dcore.container_name }}"
+    etc_hosts:      "{{ my_etc_hosts | default({}) }}"
     state:          started
     restart_policy: "unless-stopped"
     ports:          "{{ my_port_list }}"
-    links:          "{{ dcore_instance_links_list }}"
     volumes:        "{{ dcore_instance_volumes_list }}"
     # env:
     #   DCORE_EXTRA_ARGS: "{{ dcore_extra_args }}"
@@ -179,7 +176,7 @@
 
 - name: "Copy api-access file for dcore ({{ processed_container }}) if mainnet"
   copy:
-    src:   "environments/{{ using_environment }}/files/dcore/{{ dcore.decent_net_name }}__api-access.json"
+    src:   "environments/{{ using_environment }}/files/dcore/api-access.json"
     dest:  "{{ dcore.dir.data }}/api-access.json"
     mode:  0644
     owner: "{{ application_owner }}"

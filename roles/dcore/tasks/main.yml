@@ -8,27 +8,16 @@
 #   debug:
 #     var: dcore_container
 
-- name: "Define list of seeders and witnesses"
+- name: "Define list of dcore instances"
   set_fact:
-    list_of_seeders:   "{{ dcore_containers | dict2items | selectattr('value.role', 'equalto', 'seeder') | map(attribute='key') | list }}"
-    list_of_witnesses: "{{ dcore_containers | dict2items | selectattr('value.role', 'equalto', 'witness') | map(attribute='key') | list }}"
+    list_of_dcors:     "{{ dcore_containers | dict2items | map(attribute='key') | list }}"
 
-# - name: "DEBUG - List of seeders"
+# - name: "DEBUG - List of dcore instances"
 #   debug:
-#     msg: "{{ list_of_seeders }}"
-#
-# - name: "DEBUG - List of witnesses"
-#   debug:
-#     msg: "{{ list_of_witnesses }}"
+#     msg: "{{ list_of_dcors }}"
 
-- name: "Include dcore_instance.yml task for dcore container with witness role"
+- name: "Include dcore_instance.yml task for all dcore container"
   include_tasks: dcore_instance.yml
   vars:
     processed_container: "{{ item }}"
-  loop: "{{ list_of_witnesses }}"
-
-- name: "Include dcore_instance.yml task for dcore container with seeder role"
-  include_tasks: dcore_instance.yml
-  vars:
-    processed_container: "{{ item }}"
-  loop: "{{ list_of_seeders }}"
+  loop: "{{ list_of_dcors }}"
