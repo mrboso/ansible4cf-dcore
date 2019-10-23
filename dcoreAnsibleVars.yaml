@@ -13,7 +13,6 @@ dcore_containers:
     publish_p2p: true
     port_p2p: 40000
     exposed_port_p2p: Replace_DcoreP2Pport
-    seed_node: Replace_DcoreSeedNode
     dir:
       home:     "/opt/decent/dcore_s"
       conf:     "/opt/decent/dcore_s/conf"

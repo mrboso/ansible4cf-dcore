@@ -1,11 +1,10 @@
-set -x
 HANDLED_FILE="$1"
 REPLACE_MARK="$2"
 SOURCE_VARIABLE="$(echo $@ | awk '{for (i=3; i<=NF; i++) printf $i}')"
 
 # echo "$@" >> /tmp/bootstrap.output.txt
 
-if [ "${SOURCE_VARIABLE}" == "~" ]
+if [ "${SOURCE_VARIABLE}" == "Null" ]
   then
     sed -i "s/${REPLACE_MARK}/~/g" ${HANDLED_FILE}
   else
