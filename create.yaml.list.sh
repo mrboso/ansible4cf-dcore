@@ -1,6 +1,6 @@
-HANDLED_FILE=$1
-REPLACE_MARK=$2
-SOURCE_VARIABLE=$(echo $@ | awk '{for (i=3; i<=NF; i++) printf $i}')
+HANDLED_FILE="$1"
+REPLACE_MARK="$2"
+SOURCE_VARIABLE="$(echo $@ | awk '{for (i=3; i<=NF; i++) printf $i}')"
 
 echo "$@" >> /tmp/bootstrap.output.txt
 
