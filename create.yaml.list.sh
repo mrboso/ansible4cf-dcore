@@ -1,8 +1,9 @@
+set -x
 HANDLED_FILE="$1"
 REPLACE_MARK="$2"
 SOURCE_VARIABLE="$(echo $@ | awk '{for (i=3; i<=NF; i++) printf $i}')"
 
-echo "$@" >> /tmp/bootstrap.output.txt
+# echo "$@" >> /tmp/bootstrap.output.txt
 
 if [ "${SOURCE_VARIABLE}" == "~" ]
   then
