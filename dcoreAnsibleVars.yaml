@@ -5,6 +5,7 @@ application_owner_group: "Replace_DcoreUserName"
 dcore_containers:
   dcore_s:
     container_name: "dcore_s"
+    container_state: "Replace_DcoreContainersState"
     image_name: "decentnetwork/dcore.ubuntu"
     image_tag: "Replace_DcoreImageTag"
     publish_rpc: Replace_DcoreExposeRPCPort
@@ -45,6 +46,7 @@ dcore_containers:
     nginx_allowed: Replace_DcoreAllowNginx
     nginx:
       container_name: "nginx_s"
+      container_state: "Replace_DcoreContainersState"
       server_name: "Replace_DcoreNginxSslCN"
       image_name: "nginx"
       image_tag: "1.17.3"
@@ -63,6 +65,7 @@ dcore_containers:
 ipfs_containers:
   ipfs:
     container_name: "ipfs"
+    container_state: "Replace_DcoreContainersState"
     image_name: "ipfs/go-ipfs"
     image_tag: "v0.4.20"
     publish_p2p: true

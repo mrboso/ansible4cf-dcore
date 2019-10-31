@@ -70,7 +70,7 @@
   docker_container:
     name:  "{{ vars['ipfs_containers'][dcore.ipfs_container_for_used_with]['container_name'] }}"
     image: "{{ vars['ipfs_containers'][dcore.ipfs_container_for_used_with]['image_name'] }}:{{ vars['ipfs_containers'][dcore.ipfs_container_for_used_with]['image_tag'] }}"
-    state: started
+    state: "{{ vars['ipfs_containers'][dcore.ipfs_container_for_used_with]['container_state'] }}"
     restart_policy: "unless-stopped"
     ports: "{{ my_ipfs_port_list }}"
     volumes:
@@ -82,6 +82,6 @@
 - name: "Restart IPFS docker container if needed"
   docker_container:
     name:    "{{ vars['ipfs_containers'][dcore.ipfs_container_for_used_with]['container_name'] }}"
-    state:   started
+    state:   "{{ vars['ipfs_containers'][dcore.ipfs_container_for_used_with]['container_state'] }}"
     restart: yes
   when: ipfs_cfg_files_change.changed and not ipfs_deploy_change.changed

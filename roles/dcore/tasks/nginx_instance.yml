@@ -111,7 +111,7 @@
   docker_container:
     name:  "{{ dcore.nginx.container_name }}"
     image: "{{ dcore.nginx.image_name }}:{{ dcore.nginx.image_tag }}"
-    state: started
+    state: "{{ dcore.nginx.container_state }}"
     restart_policy: "unless-stopped"
     recreate: "{{ 'yes' if container_deploy_change.changed else 'no' }}"
     ports:
@@ -132,7 +132,7 @@
 - name: "Restart nginx docker container {{ processed_container }} if needed"
   docker_container:
     name:    "{{ dcore.nginx.container_name }}"
-    state:   started
+    state:   "{{ dcore.nginx.container_state }}"
     restart: yes
   when: ( nginx_crt_files_change.changed or nginx_conf_files_change.changed ) and not nginx_deploy_change.changed
 

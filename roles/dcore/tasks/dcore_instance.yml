@@ -159,7 +159,7 @@
     image:          "{{ dcore.image_name }}:{{ dcore.image_tag }}"
     hostname:       "{{ dcore.container_name }}"
     etc_hosts:      "{{ my_etc_hosts | default({}) }}"
-    state:          started
+    state:          "{{ dcore.container_state }}"
     restart_policy: "unless-stopped"
     ports:          "{{ my_port_list }}"
     volumes:        "{{ dcore_instance_volumes_list }}"
@@ -170,7 +170,7 @@
 - name: "Restart dcore docker container {{ processed_container }} if needed"
   docker_container:
     name:    "{{ dcore.container_name }}"
-    state:   started
+    state:   "{{ dcore.container_state }}"
     restart: yes
   when: ( conf_files_change.changed or config_file_change.changed ) and not container_deploy_change.changed
 
@@ -205,7 +205,7 @@
 - name: "Restart dcore docker container {{ processed_container }} if needed"
   docker_container:
     name:    "{{ dcore.container_name }}"
-    state:   started
+    state:   "{{ dcore.container_state }}"
     restart: yes
   when: mainnet_api_access_file_copy.changed or mainnet_api_access_conf_insert.changed or mainnet_p2p_endpoint_conf_insert.changed
 
