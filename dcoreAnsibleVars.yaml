@@ -37,41 +37,41 @@ dcore_containers:
     decent_net_name: "Replace_DcoreNetName"
     ######## START - dcore config.ini parameters
     # role_custom [boolean] - has precedense over other roles. If true, all other config.ini paramaters will be ignored
-    role_custom: Replace_DcoreRoleCustom                             # boolean - has precedense over other roles. If true, all other config.ini paramaters will be ignored
+    role_custom: Replace_DcoreRoleCustom
     # role_custom_name [string] - config with this name will be used unmodified
-    role_custom_name: "Replace_DcoreRoleCustomName"                  # string - config with this name will be used unmodified
+    role_custom_name: "Replace_DcoreRoleCustomName"
     # role_miner [boolean] - if the config should be modified as for miner
-    role_miner: Replace_DcoreRoleMiner                                # boolean - if the config should be modified as for miner
+    role_miner: Replace_DcoreRoleMiner
     # role_seeder [boolean] - if the config should be modified as for seeder
-    role_seeder: Replace_DcoreRoleSeeder                              # boolean - if the config should be modified as for seeder
+    role_seeder: Replace_DcoreRoleSeeder
     # seed_node ["~" | list of strings] - definition of known blockchain nodes in internet
-    seed_node: Replace_DcoreSeedNode                                    # "~" | list of strings - definition of known blockchain nodes in internet
+    seed_node: Replace_DcoreSeedNode
     # ipfs_allowed [boolean] - if IPFS will be used with dcore instance
-    ipfs_allowed: Replace_DcoreIpfsAllowed                           # boolean - if IPFS will be used with dcore instance
+    ipfs_allowed: Replace_DcoreIpfsAllowed
     # ipfs_container_for_used_with [string] - name of the container where IPFS is running
     ipfs_container_for_used_with: "ipfs"
     # enable_stale_production [boolean] - if allow creation of block even if empty slots in BC are found
-    enable_stale_production: Replace_DcoreEnableStalProduction           # boolean - if allow creation of block even if empty slots in BC are found
+    enable_stale_production: Replace_DcoreEnableStalProduction
     # required_miners_participation [integer] - how many miner in % must be participating
-    required_miners_participation: Replace_DcoreRequiredMinersParticipation     # integer - how many miner in % must be participating
+    required_miners_participation: Replace_DcoreRequiredMinersParticipation
     # miner_id [list] - list of IDs (required if role_miner is true)
-    miner_id: Replace_DcoreMinerID                                      # list - list of IDs (required if role_miner is true)
+    miner_id: Replace_DcoreMinerID
     # miner_private_key [list of strings] - list of private keys to mentioned IDs (required if role_miner is true)
-    miner_private_key: Replace_DcoreMinerPrivateKey                             # list - list of private keys to mentioned IDs (required if role_miner is true)
+    miner_private_key: Replace_DcoreMinerPrivateKey
     # seeder [list of strings] - list of IDs (required if role_seeder is true)
-    seeder: Replace_DcoreSeeder                                        # list - list of IDs (required if role_seeder is true)
+    seeder: Replace_DcoreSeeder
     # seeder_private_key [list of strings] - list of private keys to mentioned IDs (required if role_seeder is true)
-    seeder_private_key: Replace_DcoreSeederPrivateKey                            # list - list of private keys to mentioned IDs (required if role_seeder is true)
+    seeder_private_key: Replace_DcoreSeederPrivateKey
     # content_private_key [list of strings] - list of El Gamal content private keys to mentioned IDs (required if role_seeder is true)
-    content_private_key: Replace_DcoreContentPrivateKey                           # list - list of El Gamal content private keys to mentioned IDs (required if role_seeder is true)
+    content_private_key: Replace_DcoreContentPrivateKey
     # free_space [integer] - how much space you want to allocate for seeding (in MB)
-    free_space: Replace_DcoreFreeSpace                               # integer - how much space you want to allocate for seeding (in MB)
+    free_space: Replace_DcoreFreeSpace
     # seeding_price [float] - price per MB of seeding space
-    seeding_price: Replace_DcoreSeedingPrice                              # float - price per MB of seeding space
+    seeding_price: Replace_DcoreSeedingPrice
     # transaction_id_history [boolean] - wheather to allow ID of transaction in history
-    transaction_id_history: Replace_DcoreTransactionIDHistory                    # boolean - wheather to allow ID of transaction in history
+    transaction_id_history: Replace_DcoreTransactionIDHistory
     # logger_level [string "debug" | "info" | "warning" | "error"] - log level definition for each type of log message
-    logger_level:                                   # log level definition for each type of log message
+    logger_level:
       default: "Replace_DcoreLoggerLevelDefault"
       p2p: "Replace_DcoreLoggerLevelP2P"
       transfer: "Replace_DcoreLoggerLevelTransfer"
