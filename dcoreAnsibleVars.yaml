@@ -1,83 +1,148 @@
 ---
 using_environment: "Replace_DcoreNetName"
-application_owner: "Replace_DcoreUserName"
-application_owner_group: "Replace_DcoreUserName"
+# application_owner [string] - name of the user who will own files and processes
+application_owner: "Replace_DcoreApplicationOwner"
+# application_owner_group [string] - name of the group who will own files and processes
+application_owner_group: "Replace_DcoreApplicationOwner"
+# dcore_containers [key word] - section for configuration of all dcore containers
 dcore_containers:
   dcore_s:
+    # container_name [string] - name of the docker container instance
     container_name: "dcore_s"
-    container_state: "Replace_DcoreContainersState"
+    # container_state ["started" | "stopped"] - whather the container should start after creation or not
+    container_state: "Replace_DcoreContainerState"
+    # image_name [string] - name of the image in docker hub which the instance will be base on
     image_name: "decentnetwork/dcore.ubuntu"
+    # image_tag [string] - tag of the image in docker hub which the instance will be base on
     image_tag: "Replace_DcoreImageTag"
-    publish_rpc: Replace_DcoreExposeRPCPort
+    # publish_rpc [boolean] - wheather to publish RPC port to host
+    publish_rpc: Replace_DcorePublishRpc
+    # port_rpc [integer] - container internal port number for RPC communication
     port_rpc: 8090
-    exposed_port_rpc: Replace_DcoreRPCport
+    # exposed_port_rpc [integer] - container published port number for RPC communication
+    exposed_port_rpc: Replace_DcoreExposedPortRPC
+    # publish_p2p [boolean] - wheather to publish P2P port to host
     publish_p2p: true
+    # port_p2p [integer] - container internal port number for P2P communication
     port_p2p: 40000
-    exposed_port_p2p: Replace_DcoreP2Pport
+    # exposed_port_p2p [integer] - container published port number for P2P communication
+    exposed_port_p2p: Replace_DcoreExposedPortP2p
+    # dir [directory] - path to the folders for persistent container storage
     dir:
       home:     "/opt/decent/dcore_s"
       conf:     "/opt/decent/dcore_s/conf"
       data:     "/opt/decent/dcore_s/data"
       packages: "/opt/decent/dcore_s/packages"
+    # decent_net_name [string] - neme of the blockchaon network
     decent_net_name: "Replace_DcoreNetName"
-    # START - dcore config.ini parameters
+    ######## START - dcore config.ini parameters
+    # role_custom [boolean] - has precedense over other roles. If true, all other config.ini paramaters will be ignored
     role_custom: Replace_DcoreRoleCustom                             # boolean - has precedense over other roles. If true, all other config.ini paramaters will be ignored
+    # role_custom_name [string] - config with this name will be used unmodified
     role_custom_name: "Replace_DcoreRoleCustomName"                  # string - config with this name will be used unmodified
+    # role_miner [boolean] - if the config should be modified as for miner
     role_miner: Replace_DcoreRoleMiner                                # boolean - if the config should be modified as for miner
+    # role_seeder [boolean] - if the config should be modified as for seeder
     role_seeder: Replace_DcoreRoleSeeder                              # boolean - if the config should be modified as for seeder
+    # seed_node ["~" | list of strings] - definition of known blockchain nodes in internet
     seed_node: Replace_DcoreSeedNode                                    # "~" | list of strings - definition of known blockchain nodes in internet
-    ipfs_allowed: Replace_DcoreAllowIPFS                           # boolean - if IPFS will be used with dcore instance
+    # ipfs_allowed [boolean] - if IPFS will be used with dcore instance
+    ipfs_allowed: Replace_DcoreIpfsAllowed                           # boolean - if IPFS will be used with dcore instance
+    # ipfs_container_for_used_with [string] - name of the container where IPFS is running
     ipfs_container_for_used_with: "ipfs"
+    # enable_stale_production [boolean] - if allow creation of block even if empty slots in BC are found
     enable_stale_production: Replace_DcoreEnableStalProduction           # boolean - if allow creation of block even if empty slots in BC are found
+    # required_miners_participation [integer] - how many miner in % must be participating
     required_miners_participation: Replace_DcoreRequiredMinersParticipation     # integer - how many miner in % must be participating
+    # miner_id [list] - list of IDs (required if role_miner is true)
     miner_id: Replace_DcoreMinerID                                      # list - list of IDs (required if role_miner is true)
+    # miner_private_key [list of strings] - list of private keys to mentioned IDs (required if role_miner is true)
     miner_private_key: Replace_DcoreMinerPrivateKey                             # list - list of private keys to mentioned IDs (required if role_miner is true)
+    # seeder [list of strings] - list of IDs (required if role_seeder is true)
     seeder: Replace_DcoreSeeder                                        # list - list of IDs (required if role_seeder is true)
+    # seeder_private_key [list of strings] - list of private keys to mentioned IDs (required if role_seeder is true)
     seeder_private_key: Replace_DcoreSeederPrivateKey                            # list - list of private keys to mentioned IDs (required if role_seeder is true)
+    # content_private_key [list of strings] - list of El Gamal content private keys to mentioned IDs (required if role_seeder is true)
     content_private_key: Replace_DcoreContentPrivateKey                           # list - list of El Gamal content private keys to mentioned IDs (required if role_seeder is true)
+    # free_space [integer] - how much space you want to allocate for seeding (in MB)
     free_space: Replace_DcoreFreeSpace                               # integer - how much space you want to allocate for seeding (in MB)
+    # seeding_price [float] - price per MB of seeding space
     seeding_price: Replace_DcoreSeedingPrice                              # float - price per MB of seeding space
+    # transaction_id_history [boolean] - wheather to allow ID of transaction in history
     transaction_id_history: Replace_DcoreTransactionIDHistory                    # boolean - wheather to allow ID of transaction in history
+    # logger_level [string "debug" | "info" | "warning" | "error"] - log level definition for each type of log message
     logger_level:                                   # log level definition for each type of log message
-      default: "Replace_DcoreLogLevelDefault"                               # string "debug" | "info" | "warning" | "error"
-      p2p: "Replace_DcoreLogLevelP2P"                                  # string "debug" | "info" | "warning" | "error"
-      transfer: "Replace_DcoreLogLevelTransfer"                             # string "debug" | "info" | "warning" | "error"
-    # END - dcore config.ini parameters
-    nginx_allowed: Replace_DcoreAllowNginx
+      default: "Replace_DcoreLoggerLevelDefault"
+      p2p: "Replace_DcoreLoggerLevelP2P"
+      transfer: "Replace_DcoreLoggerLevelTransfer"
+    ######## END - dcore config.ini parameters
+    # nginx_allowed [boolean] - if Nginx will be used with dcore instance
+    nginx_allowed: Replace_DcoreNginxAllowed
+    # nginx - configuration section of nginx as reverse proxy for dcore instance (required if nginx_allowed is true)
     nginx:
+      # container_name [string] - name of the docker container instance
       container_name: "nginx_s"
-      container_state: "Replace_DcoreContainersState"
-      server_name: "Replace_DcoreNginxSslCN"
+      # container_state ["started" | "stopped"] - whather the container should start after creation or not
+      container_state: "Replace_DcoreContainerState"
+      # server_name [string] - the CN of the nxinx server where it will be listening
+      server_name: "Replace_DcoreNginxServerName"
+      # image_name [string] - name of the image in docker hub which the instance will be base on
       image_name: "nginx"
+      # image_tag [string] - tag of the image in docker hub which the instance will be base on
       image_tag: "1.17.3"
+      # port_http [integer] - container internal port number for HTTP communication
       port_http: 80
+      # exposed_port_http [integer] - container published port number for HTTP communication
       exposed_port_http: 80
+      # port_https [integer] - container internal port number for HTTPS communication
       port_https: 443
+      # exposed_port_https [integer] - container published port number for HTTPS communication
       exposed_port_https: 443
+      # ssl_selfsigned [boolean] - wheather to use selfsigned SSL cert wich will be generate or use alredy provided set of crt and key
       ssl_selfsigned: Replace_DcoreNginxSslSelfsigned
+      # port_status [integer] - container internal port number for accessing status page
       port_status: 9090
+      # exposed_port_status [integer] - container published port number for accessing status page
       exposed_port_status: 9090
+      # dir [directory] - path to the folders for persistent container storage
       dir:
         home: "/opt/decent/nginx_s"
         conf: "/opt/decent/nginx_s/conf"
         data: "/opt/decent/nginx_s/data"
         logs: "/opt/decent/nginx_s/logs"
+
+# ipfs_containers [key word] - section for configuration of all IPFS containers
 ipfs_containers:
   ipfs:
+    # container_name [string] - name of the docker container instance
     container_name: "ipfs"
-    container_state: "Replace_DcoreContainersState"
+    # container_state ["started" | "stopped"] - whather the container should start after creation or not
+    container_state: "Replace_DcoreContainerState"
+    # image_name [string] - name of the image in docker hub which the instance will be base on
     image_name: "ipfs/go-ipfs"
+    # image_tag [string] - tag of the image in docker hub which the instance will be base on
     image_tag: "v0.4.20"
+    # publish_p2p [boolean] - wheather to publish P2P port to host
     publish_p2p: true
+    # port_p2p [integer] - container internal port number for P2P communication
     port_p2p: 4001
+    # exposed_port_p2p [integer] - container published port number for P2P communication
     exposed_port_p2p: 4001
+    # publish_api [boolean] - wheather to publish API port to host
     publish_api: true
+    # port_api [integer] - container internal port number for API communication
     port_api: 5001
+    # exposed_port_api [integer] - container published port number for API communication
     exposed_port_api: 5001
+    # publish_gateway [boolean] - wheather to publish gateway port to host
     publish_gateway: true
+    # port_gateway [integer] - container internal port number for gateway communication
     port_gateway: 8080
+    # exposed_port_gateway [integer] - container published port number for gateway communication
     exposed_port_gateway: 8080
+    # storage_max [integer] - maximal capacity for IPFS data
     storage_max: "10GB"
+    # dir [directory] - path to the folders for persistent container storage
     dir:
       home:    "/opt/decent/ipfs"
       conf:    "/opt/decent/ipfs/conf"
