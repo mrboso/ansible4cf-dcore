@@ -116,7 +116,7 @@
     recreate: "{{ 'yes' if container_deploy_change.changed else 'no' }}"
     ports:
       - "{{ dcore.nginx.exposed_port_http }}:{{ dcore.nginx.port_http }}"
-      - "{{ dcore.nginx.exposed_port_https }}:{{ dcore.nginx.port_https }}"
+      # - "{{ dcore.nginx.exposed_port_https }}:{{ dcore.nginx.port_https }}"
       - "{{ dcore.nginx.exposed_port_status }}:{{ dcore.nginx.port_status }}"
     links:
       - "{{ dcore.container_name }}:dcore"
